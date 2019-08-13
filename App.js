@@ -15,11 +15,13 @@ import {
 
 import User from "./components/User";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default class App extends Component {
   state = {
     scrollOffset: new Animated.Value(0),
+    listProgress: new Animated.Value(0),
+    userInfoProgress: new Animated.Value(0),
     userSelected: null,
     userInfoVisible: false,
     users: [
@@ -67,8 +69,23 @@ export default class App extends Component {
   };
 
   selectUser = user => {
+    const { listProgress, userInfoProgress } = this.state;
+
     this.setState({ userSelected: user });
-    this.setState({ userInfoVisible: true });
+
+    Animated.sequence([
+      Animated.timing(listProgress, {
+        toValue: 100,
+        duration: 300,
+      }),
+
+      Animated.timing(userInfoProgress, {
+        toValue: 100,
+        duration: 500,
+      }),
+    ]).start(() => {
+      this.setState({ userInfoVisible: true });
+    });
   };
 
   renderDetail = () => (
@@ -78,10 +95,22 @@ export default class App extends Component {
   );
 
   renderList = () => {
-    const { users, scrollOffset } = this.state;
+    const { users, scrollOffset, listProgress } = this.state;
 
     return (
-      <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            transform: [{
+              translateX: listProgress.interpolate({
+                inputRange: [0, 100],
+                outputRange: [0, SCREEN_WIDTH],
+              }),
+            }],
+          },
+        ]}
+      >
         <ScrollView
           scrollEventThrottle={16}
           onScroll={Animated.event([{
@@ -98,12 +127,12 @@ export default class App extends Component {
             />
           ))}
         </ScrollView>
-      </View>
+      </Animated.View>
     )
   }
 
   render() {
-    const { userSelected, scrollOffset } = this.state;
+    const { userSelected, scrollOffset, userInfoProgress } = this.state;
 
     return (
       <View style={styles.container}>
@@ -121,8 +150,16 @@ export default class App extends Component {
             },
           ]}
         >
-          <Image
-            style={styles.headerImage}
+          <Animated.Image
+            style={[
+              styles.headerImage,
+              {
+                opacity: userInfoProgress.interpolate({
+                  inputRange: [0, 100],
+                  outputRange: [0, 1],
+                }),
+              },
+            ]}
             source={userSelected ? { uri: userSelected.thumbnail } : null}
           />
 
@@ -135,12 +172,35 @@ export default class App extends Component {
                   outputRange: [24, 16],
                   extrapolate: 'clamp',
                 }),
+                transform: [{
+                  translateX: userInfoProgress.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: [0, SCREEN_WIDTH],
+                  }),
+                }],
+              },
+            ]}
+          >
+            GoNative
+          </Animated.Text>
+
+          <Animated.Text
+            style={[
+              styles.headerText,
+              {
+                transform: [{
+                  translateX: userInfoProgress.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: [SCREEN_WIDTH * -1, 0],
+                  }),
+                }],
               }
             ]}
           >
-            {userSelected ? userSelected.name : "GoNative"}
+            {userSelected ? userSelected.name : null}
           </Animated.Text>
         </Animated.View>
+
         {this.state.userInfoVisible ? this.renderDetail() : this.renderList()}
       </View>
     );
